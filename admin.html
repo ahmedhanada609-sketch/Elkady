@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم إدارة المتجر | ELkady Store</title>
+    <style>
+        :root { --gold: #ffd700; --black: #111; --dark-grey: #222; }
+        body { background: var(--black); color: white; font-family: sans-serif; padding: 20px; text-align: center; margin: 0; }
+        .box { background: var(--dark-grey); border: 1px solid var(--gold); padding: 25px; max-width: 600px; margin: 30px auto; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; box-sizing: border-box; border-radius: 5px; font-size: 1rem; }
+        input, select { background: #111; border: 1px solid #444; color: white; }
+        button { background: var(--gold); color: black; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; }
+        button:hover { background: #e6c200; }
+        .hidden { display: none; }
+        fieldset { border: 1px solid var(--gold); border-radius: 6px; padding: 15px; margin-bottom: 25px; text-align: right; }
+        legend { color: var(--gold); font-weight: bold; padding: 0 10px; }
+        .product-item { background: #333; padding: 12px; margin: 8px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; text-align: right; }
+        .product-details { flex-grow: 1; }
+        .btn-danger { background: #ff1744; color: white; width: auto; padding: 6px 12px; margin: 0; }
+        .btn-danger:hover { background: #b2102f; }
+        .nav-admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav-admin-tabs button { margin: 0; }
+    </style>
+    <script src="database.js"></script>
+</head>
+<body>
+
+    <!-- بوابة تسجيل الدخول الآمنة -->
+    <div id="login-box" class="box">
+        <h2 style="color: var(--gold);">مركز الحماية والأمان 🔐</h2>
+        <p>تسجيل دخول مصرح لمدير المتجر</p>
+        <input type="password" id="passInput" placeholder="أدخل كلمة المرور السرية للإدارة">
+        <button onclick="checkLogin()">دخول آمن للمتجر</button>
+    </div>
+
+    <!-- لوحة التحكم الكاملة -->
+    <div id="admin-panel" class="box hidden">
+        <h2 style="color: var(--gold); margin-top: 0;">مرحباً أستاذ علاء 👋</h2>
+        <p style="color: #bbb;">لوحة التحكم الكاملة وإدارة المنتجات بقاعدة بيانات SQL المدمجة</p>
+        <hr style="border-color: #444; margin-bottom: 20px;">
+
+        <!-- قسم إضافة منتج جديد -->
+        <fieldset>
+            <legend>إضافة منتج جديد للمتجر 📦</legend>
+            <label>اختر قسم المنتج:</label>
+            <select id="newCat">
+                <option value="headphones">قسم السماعات</option>
+                <option value="cables">قسم الوصلات</option>
+                <option value="cases">قسم الجرابات</option>
+            </select>
+            <input type="text" id="newName" placeholder="اسم المنتج الجديد">
+            <input type="number" id="newPrice" placeholder="السعر بالجنيه">
+            <button onclick="addNewProduct()" style="background: #00e5ff; color: #000;">حفظ ونشر المنتج بالمعرض فوراً</button>
+        </fieldset>
+
+        <!-- قسم تغيير الباسورد -->
+        <fieldset>
+            <legend>تحديث كلمة المرور والإلكترونيات الأمنية 🔒</legend>
+            <input type="password" id="oldPass" placeholder="كلمة المرور القديمة">
+            <input type="password" id="newPass" placeholder="كلمة المرور الجديدة">
+            <button onclick="changePassword()">تحديث وتأمين كلمة المرور</button>
+        </fieldset>
+
+        <!-- قائمة المنتجات وعمليات الحذف والتعديل -->
+        <h3 style="text-align: right; color: var(--gold); margin-top: 25px;">المنتجات المعروضة حالياً وتعديلها حياً:</h3>
+        <div class="nav-admin-tabs">
+            <button onclick="filterAdminCat('headphones')" style="background: #333; color: white;">السماعات</button>
+            <button onclick="filterAdminCat('cables')" style="background: #333; color: white;">الوصلات</button>
+            <button onclick="filterAdminCat('cases')" style="background: #333; color: white;">الجرابات</button>
+        </div>
+        <div id="admin-products-list"></div>
+    </div>
+
+    <script>
+        let currentPassword = localStorage.getItem('elkady_sql_pass') || "Alaa123890A";
+        let allProducts = SQLStorage.getProducts();
+        let activeCat = 'headphones';
+
+        function checkLogin() {
+            const input = document.getElementById('passInput').value;
+            if(input === currentPassword) {
+                document.getElementById('login-box').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                renderAdminProducts();
+            } else {
+                alert("تنبيه أمني: كلمة المرور غير صحيحة!");
+            }
+        }
+
+        function filterAdminCat(cat) {
+            activeCat = cat;
+            renderAdminProducts();
+        }
+
+        function renderAdminProducts() {
+            const listDiv = document.getElementById('admin-products-list');
+            listDiv.innerHTML = '';
+            const currentCatList = allProducts[activeCat] || [];
+            
+            if(currentCatList.length === 0) {
+                listDiv.innerHTML = `<p style="color: grey; padding: 10px;">لا يوجد منتجات في هذا القسم حالياً.</p>`;
+                return;
+            }
+
+            currentCatList.forEach((product, index) => {
+                const item = document.createElement('div');
+                item.className = 'product-item';
+                item.innerHTML = `
+                    <div class="product-details">
+                        <strong>${product.name}</strong> <br>
+                        <span style="color: var(--gold); font-size: 0.9rem;">السعر الحالي: ${product.price} جنيه</span>
+                    </div>
+                    <button class="btn-danger" onclick="deleteProduct('${activeCat}', ${index})">حذف 🗑️</button>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        function addNewProduct() {
+            const cat = document.getElementById('newCat').value;
+            const name = document.getElementById('newName').value.trim();
+            const price = parseInt(document.getElementById('newPrice').value);
+
+            if(!name || !price) { alert("برجاء كتابة بيانات المنتج كاملة!"); return; }
+
+            if(!allProducts[cat]) { allProducts[cat] = []; }
+            allProducts[cat].push({ name: name, price: price });
+
+            SQLStorage.saveProducts(allProducts);
+            alert("تم نشر وتحديث السعر بالمعرض الحركي فوراً ✨");
+            
+            document.getElementById('newName').value = '';
+            document.getElementById('newPrice').value = '';
+            renderAdminProducts();
+        }
+
+        function deleteProduct(cat, index) {
+            if(confirm("هل تريد مسح هذا المنتج نهائياً من قاعدة بيانات متجرك؟")) {
+                allProducts[cat].splice(index, 1);
+                SQLStorage.saveProducts(allProducts);
+                renderAdminProducts();
+            }
+        }
+
+        function changePassword() {
+            const oldP = document.getElementById('oldPass').value;
+            const newP = document.getElementById('newPass').value;
+
+            if(oldP === currentPassword) {
+                if(newP.trim().length < 4) { alert("برجاء اختيار باسورد قوي!"); return; }
+                currentPassword = newP;
+                localStorage.setItem('elkady_sql_pass', newP);
+                alert("تم تحديث كلمة المرور لمركز الحماية بنجاح!");
+                document.getElementById('oldPass').value = '';
+                document.getElementById('newPass').value = '';
+            } else {
+                alert("كلمة المرور القديمة غير صحيحة!");
+            }
+        }
+    </script>
+</body>
+</html>

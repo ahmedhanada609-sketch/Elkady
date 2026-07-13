@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELkady Store</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- مكتبة Three.js لبناء الروبوت الـ 3D التفاعلي -->
+    <script src="https://cloudflare.com"></script>
+</head>
+<body>
+
+    <!-- الشاشة الافتتاحية (اللوجو بالأسود والذهبي والنار الخفيفة) -->
+    <div id="splash">
+        <div id="logo">ELkady store</div>
+        <div class="fire-bg"></div>
+    </div>
+
+    <!-- رأس الصفحة -->
+    <header>
+        <h1>ELkady store</h1>
+    </header>
+
+    <!-- أقسام المنتجات الثلاثة -->
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="openTab('headphones', event)">سماعات</button>
+        <button class="tab-btn" onclick="openTab('cables', event)">وصلات</button>
+        <button class="tab-btn" onclick="openTab('cases', event)">جرابات</button>
+    </div>
+
+    <!-- حاويات عرض المنتجات -->
+    <div id="headphones" class="tab-content active"></div>
+    <div id="cables" class="tab-content"></div>
+    <div id="cases" class="tab-content"></div>
+
+    <!-- منطقة الروبوت التفاعلي الشفاف باليمين -->
+    <div id="character-container">
+        <div class="bubble-text" id="bubble">احنا في وقت شغل!!</div>
+        <div id="robot-3d-canvas"></div>
+        <div class="character-arm"></div>
+    </div>
+
+    <!-- السير الميكانيكي (مستواه فوق الروبوت لتمشي البضاعة فوقه) -->
+    <div class="conveyor-belt"></div>
+
+    <!-- زر سلة المشتريات في أقصى اليسار -->
+    <button onclick="openCheckout()" class="cart-btn">سلة المشتريات (<span id="cart-count">0</span>)</button>
+
+    <!-- نافذة إتمام الشراء للزبون -->
+    <div class="modal" id="checkoutModal">
+        <div class="modal-content">
+            <h2>إتمام الطلب الإلكتروني</h2>
+            <form id="orderForm" onsubmit="submitOrder(event)">
+                <div class="form-group">
+                    <label>الاسم بالكامل:</label>
+                    <input type="text" id="custName" required>
+                </div>
+                <div class="form-group">
+                    <label>رقم الهاتف (فودافون كاش / انستا باي):</label>
+                    <input type="tel" id="custPhone" placeholder="01xxxxxxxxx" required>
+                </div>
+                <div class="form-group">
+                    <label>مكان الاستلام (العنوان بالتفصيل):</label>
+                    <input type="text" id="custAddress" required>
+                </div>
+                <div class="form-group">
+                    <label>طريقة الدفع:</label>
+                    <select id="paymentMethod">
+                        <option value="عند الاستلام">عند الاستلام</option>
+                        <option value="فودافون كاش">فودافون كاش</option>
+                        <option value="انستا باي">انستا باي</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-buy" style="background:#00e5ff; color: #000;">تأكيد الشراء وإرسال واتساب</button>
+                <button type="button" onclick="closeCheckout()" style="background:grey; margin-top:10px;" class="btn-buy">إلغاء</button>
+            </form>
+        </div>
+    </div>
+
+    <script href="database.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
