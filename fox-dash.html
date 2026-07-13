@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fox Dash — Endless Runner</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+  :root{
+    --sky-top:#1b1035;
+    --sky-mid:#5b2a6e;
+    --sky-horizon:#ff8f5c;
+    --sun:#ffd166;
+    --path:#3a2e57;
+    --lane-line:#ffd166;
+    --coral:#ff5d73;
+    --mint:#3ddc97;
+    --cream:#fff4e6;
+    --ink:#241533;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:var(--ink);
+    font-family:'Baloo 2', sans-serif;
+    color:var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+  }
+  #stage{
+    position:relative;
+    width:min(100vw, 480px);
+    aspect-ratio: 9 / 16;
+    max-height:100vh;
+    background:var(--ink);
+    box-shadow:0 0 40px rgba(0,0,0,0.6);
+    overflow:hidden;
+    touch-action:none;
+  }
+  canvas{
+    display:block;
+    width:100%; height:100%;
+  }
+  .hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:16px 18px;
+    pointer-events:none;
+    z-index:5;
+  }
+  .badge{
+    background:rgba(36,21,51,0.55);
+    border:2px solid rgba(255,209,102,0.6);
+    border-radius:14px;
+    padding:6px 14px;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.5px;
+    backdrop-filter: blur(2px);
+  }
+  .badge small{
+    display:block;
+    font-family:'Space Mono', monospace;
+    font-size:9px;
+    font-weight:400;
+    color:var(--sun);
+    letter-spacing:1px;
+    text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .badge .num{
+    font-size:20px;
+    color:var(--cream);
+  }
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center;
+    background:radial-gradient(circle at 50% 35%, rgba(91,42,110,0.55), rgba(27,16,53,0.92));
+    z-index:10;
+    padding:24px;
+  }
+  .overlay h1{
+    font-size:clamp(30px, 8vw, 44px);
+    margin:0 0 6px;
+    font-weight:800;
+    color:var(--sun);
+    text-shadow:0 3px 0 rgba(0,0,0,0.35);
+    letter-spacing:0.5px;
+  }
+  .overlay .tag{
+    font-family:'Space Mono', monospace;
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:var(--coral);
+    margin-bottom:22px;
+  }
+  .controls-diagram{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin:6px 0 24px;
+    max-width:320px;
+  }
+  .ctrl-chip{
+    background:rgba(255,244,230,0.08);
+    border:1.5px solid rgba(255,209,102,0.35);
+    border-radius:12px;
+    padding:10px 6px;
+    font-size:12px;
+    line-height:1.4;
+  }
+  .ctrl-chip b{
+    display:block;
+    font-size:16px;
+    color:var(--mint);
+    margin-bottom:2px;
+  }
+  .go-btn{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size:20px;
+    letter-spacing:0.5px;
+    background:var(--coral);
+    color:var(--ink);
+    border:none;
+    border-radius:999px;
+    padding:16px 42px;
+    cursor:pointer;
+    box-shadow:0 6px 0 #b8394a, 0 10px 18px rgba(0,0,0,0.35);
+    transition:transform 0.08s ease;
+  }
+  .go-btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #b8394a; }
+  .overlay .final-score{
+    font-size:15px;
+    color:var(--cream);
+    margin-bottom:4px;
+    font-family:'Space Mono', monospace;
+  }
+  .overlay .final-score .big{
+    font-family:'Baloo 2', sans-serif;
+    font-size:46px;
+    color:var(--sun);
+    font-weight:800;
+    display:block;
+    margin:2px 0 10px;
+  }
+  .hidden{ display:none !important; }
+
+  .touch-controls{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    display:flex;
+    justify-content:space-between;
+    padding:16px;
+    z-index:6;
+    pointer-events:none;
+  }
+  .tbtn{
+    pointer-events:all;
+    width:58px; height:58px;
+    border-radius:50%;
+    background:rgba(255,244,230,0.12);
+    border:2px solid rgba(255,244,230,0.3);
+    color:var(--cream);
+    font-size:22px;
+    display:flex; align-items:center; justify-content:center;
+    backdrop-filter: blur(3px);
+  }
+  .tbtn:active{ background:rgba(255,209,102,0.35); }
+  .mid-btns{ display:flex; flex-direction:column; gap:10px; align-items:center; }
+  .side-btns{ display:flex; align-items:center; }
+
+  @media (min-width: 700px){
+    .touch-controls{ opacity:0.55; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div class="badge"><small>Score</small><span class="num" id="scoreEl">0</span></div>
+    <div class="badge"><small>Best</small><span class="num" id="bestEl">0</span></div>
+  </div>
+
+  <div class="touch-controls">
+    <div class="side-btns"><button class="tbtn" id="btnLeft">◀</button></div>
+    <div class="mid-btns">
+      <button class="tbtn" id="btnJump">▲</button>
+      <button class="tbtn" id="btnDuck">▼</button>
+    </div>
+    <div class="side-btns"><button class="tbtn" id="btnRight">▶</button></div>
+  </div>
+
+  <div class="overlay" id="startScreen">
+    <div class="tag">Endless Runner</div>
+    <h1>🦊 Fox Dash</h1>
+    <div class="controls-diagram">
+      <div class="ctrl-chip"><b>↑ / Space</b>Jump rocks</div>
+      <div class="ctrl-chip"><b>↓</b>Duck under birds</div>
+      <div class="ctrl-chip"><b>← / →</b>Dodge barriers</div>
+    </div>
+    <button class="go-btn" id="startBtn">Run!</button>
+  </div>
+
+  <div class="overlay hidden" id="overScreen">
+    <div class="tag">Wiped out</div>
+    <div class="final-score">You scored<span class="big" id="finalScore">0</span></div>
+    <button class="go-btn" id="retryBtn">Run Again</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const stage = document.getElementById('stage');
+
+  const scoreEl = document.getElementById('scoreEl');
+  const bestEl = document.getElementById('bestEl');
+  const startScreen = document.getElementById('startScreen');
+  const overScreen = document.getElementById('overScreen');
+  const finalScoreEl = document.getElementById('finalScore');
+
+  // ---------- canvas sizing ----------
+  let W = 450, H = 800;
+  function resize(){
+    const rect = stage.getBoundingClientRect();
+    W = Math.round(rect.width);
+    H = Math.round(rect.height);
+    canvas.width = W * devicePixelRatio;
+    canvas.height = H * devicePixelRatio;
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- perspective helpers ----------
+  const horizonYRatio = 0.34;
+  const laneSpreadRatio = 0.30;
+
+  function horizonY(){ return H*horizonYRatio; }
+  function groundY(){ return H*0.92; }
+  function vanishX(){ return W*0.5; }
+
+  function laneX(lane, t){
+    const vx = vanishX();
+    const bx = W*0.5 + lane*(W*laneSpreadRatio);
+    return vx + (bx-vx)*t;
+  }
+  function worldY(t){
+    return horizonY() + (groundY()-horizonY())*t;
+  }
+  function worldScale(t){
+    return 0.12 + 0.88*t;
+  }
+
+  // ---------- game state ----------
+  let state = 'start'; // start | playing | over
+  let score = 0;
+  let best = 0;
+  let elapsed = 0;
+  let difficultySpeed = 0.55; // z progressed per second (base)
+  let spawnTimer = 0;
+  let spawnInterval = 1.15;
+
+  const player = {
+    lane: 0,
+    targetLane: 0,
+    laneAnim: 0, // 0..1 progress toward target
+    y: 0, // jump offset (negative = up)
+    vy: 0,
+    isJumping:false,
+    isDucking:false,
+    runPhase:0,
+  };
+
+  let obstacles = []; // {type, lane(s):[], z, resolved, id}
+  let particles = []; // ground dust / speed lines
+  let obstacleId = 0;
+
+  const GRAVITY = 2600;
+  const JUMP_V = -980;
+  const COLLIDE_Z = 0.93;
+
+  // ---------- persistence (best score) ----------
+  async function loadBest(){
+    try{
+      const r = await window.storage.get('fox-dash-best', false);
+      if(r && r.value){ best = parseInt(r.value)||0; bestEl.textContent = best; }
+    }catch(e){ /* no record yet or storage unavailable */ }
+  }
+  async function saveBest(){
+    try{ await window.storage.set('fox-dash-best', String(best), false); }catch(e){}
+  }
+  loadBest();
+
+  // ---------- input ----------
+  function tryJump(){
+    if(state!=='playing') return;
+    if(!player.isJumping && !player.isDucking){
+      player.isJumping = true;
+      player.vy = JUMP_V;
+    }
+  }
+  function setDuck(v){
+    if(state!=='playing') return;
+    if(!player.isJumping) player.isDucking = v;
+  }
+  function moveLane(dir){
+    if(state!=='playing') return;
+    const nl = Math.max(-1, Math.min(1, player.targetLane+dir));
+    if(nl !== player.targetLane){
+      player.targetLane = nl;
+      player.laneAnim = 0;
+    }
+  }
+
+  window.addEventListener('keydown', (e)=>{
+    switch(e.key){
+      case 'ArrowUp': case ' ': case 'w': case 'W':
+        e.preventDefault(); tryJump(); break;
+      case 'ArrowDown': case 's': case 'S':
+        e.preventDefault(); setDuck(true); break;
+      case 'ArrowLeft': case 'a': case 'A':
+        e.preventDefault(); moveLane(-1); break;
+      case 'ArrowRight': case 'd': case 'D':
+        e.preventDefault(); moveLane(1); break;
+    }
+    if(state!=='playing' && (e.key===' '||e.key==='Enter')) startGame();
+  });
+  window.addEventListener('keyup', (e)=>{
+    if(e.key==='ArrowDown' || e.key==='s' || e.key==='S') setDuck(false);
+  });
+
+  // touch buttons
+  document.getElementById('btnJump').addEventListener('pointerdown', tryJump);
+  document.getElementById('btnLeft').addEventListener('pointerdown', ()=>moveLane(-1));
+  document.getElementById('btnRight').addEventListener('pointerdown', ()=>moveLane(1));
+  const duckBtn = document.getElementById('btnDuck');
+  duckBtn.addEventListener('pointerdown', ()=>setDuck(true));
+  duckBtn.addEventListener('pointerup', ()=>setDuck(false));
+  duckBtn.addEventListener('pointerleave', ()=>setDuck(false));
+
+  // swipe gestures on canvas
+  let touchStart = null;
+  stage.addEventListener('pointerdown', (e)=>{
+    touchStart = {x:e.clientX, y:e.clientY, t:Date.now()};
+  });
+  stage.addEventListener('pointerup', (e)=>{
+    if(!touchStart) return;
+    const dx = e.clientX - touchStart.x;
+    const dy = e.clientY - touchStart.y;
+    const dt = Date.now()-touchStart.t;
+    touchStart = null;
+    if(dt>600) return;
+    if(Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30){
+      moveLane(dx>0?1:-1);
+    } else if(dy < -30){
+      tryJump();
+    } else if(dy > 30){
+      setDuck(true); setTimeout(()=>setDuck(false),250);
+    }
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('retryBtn').addEventListener('click', startGame);
+
+  function startGame(){
+    state = 'playing';
+    score = 0;
+    elapsed = 0;
+    difficultySpeed = 0.55;
+    spawnTimer = 0;
+    spawnInterval = 1.15;
+    obstacles = [];
+    particles = [];
+    player.lane=0; player.targetLane=0; player.laneAnim=1;
+    player.y=0; player.vy=0; player.isJumping=false; player.isDucking=false;
+    startScreen.classList.add('hidden');
+    overScreen.classList.add('hidden');
+    scoreEl.textContent = '0';
+    lastTime = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function endGame(){
+    state = 'over';
+    if(score > best){ best = score; bestEl.textContent = best; saveBest(); }
+    finalScoreEl.textContent = score;
+    overScreen.classList.remove('hidden');
+  }
+
+  // ---------- obstacle spawning ----------
+  function spawnObstacle(){
+    const r = Math.random();
+    if(r < 0.28){
+      obstacles.push({type:'rock', lanes:[-1,0,1], z:0, resolved:false, id:obstacleId++});
+    } else if(r < 0.52){
+      obstacles.push({type:'bird', lanes:[-1,0,1], z:0, resolved:false, id:obstacleId++});
+    } else if(r < 0.82){
+      // barrier blocks 1 or 2 lanes, leaving at least one open
+      const blockCount = Math.random()<0.55 ? 1 : 2;
+      const lanesAll = [-1,0,1];
+      const blocked = [];
+      const pool = [...lanesAll];
+      for(let i=0;i<blockCount;i++){
+        const idx = Math.floor(Math.random()*pool.length);
+        blocked.push(pool.splice(idx,1)[0]);
+      }
+      obstacles.push({type:'barrier', lanes:blocked, z:0, resolved:false, id:obstacleId++});
+    } else {
+      const lane = Math.floor(Math.random()*3)-1;
+      obstacles.push({type:'coin', lanes:[lane], z:0, resolved:false, id:obstacleId++});
+    }
+  }
+
+  // ---------- update ----------
+  let lastTime = 0;
+  function loop(now){
+    if(state!=='playing'){ return; }
+    let dt = (now-lastTime)/1000;
+    if(dt>0.05) dt=0.05;
+    lastTime = now;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(loop);
+  }
+
+  function update(dt){
+    elapsed += dt;
+    score += Math.round(dt*40);
+    scoreEl.textContent = score;
+
+    // ramp difficulty
+    difficultySpeed = 0.55 + Math.min(0.55, elapsed*0.012);
+    spawnInterval = Math.max(0.55, 1.15 - elapsed*0.01);
+
+    // lane animation
+    if(player.laneAnim<1){
+      player.laneAnim = Math.min(1, player.laneAnim + dt*6);
+      player.lane = lerp(player.lane, player.targetLane, easeOut(player.laneAnim));
+    }
+    player.lane = player.laneAnim>=1 ? player.targetLane : player.lane;
+    if(player.laneAnim<1){
+      const startLane = player._fromLane!==undefined?player._fromLane:player.lane;
+    }
+    // simplified: recompute lane directly via interpolation each frame
+    if(player._prevTarget!==player.targetLane){
+      player._animFrom = player._displayLane!==undefined?player._displayLane:player.targetLane;
+      player._prevTarget = player.targetLane;
+      player.laneAnim = 0;
+    }
+    if(player._animFrom===undefined) player._animFrom = 0;
+    player.laneAnim = Math.min(1, player.laneAnim + dt*7);
+    player._displayLane = lerp(player._animFrom, player.targetLane, easeOut(player.laneAnim));
+
+    // jump physics
+    if(player.isJumping){
+      player.y += player.vy*dt;
+      player.vy += GRAVITY*dt;
+      if(player.y >= 0){
+        player.y = 0; player.vy = 0; player.isJumping = false;
+      }
+    }
+    player.runPhase += dt* (player.isDucking? 6:10);
+
+    // spawn
+    spawnTimer += dt;
+    if(spawnTimer >= spawnInterval){
+      spawnTimer = 0;
+      spawnObstacle();
+    }
+
+    // move obstacles
+    for(const o of obstacles){
+      o.z += difficultySpeed*dt;
+    }
+
+    // collisions
+    for(const o of obstacles){
+      if(!o.resolved && o.z >= COLLIDE_Z){
+        o.resolved = true;
+        resolveCollision(o);
+      }
+    }
+    obstacles = obstacles.filter(o=> o.z < 1.15);
+
+    // ground particles
+    if(Math.random()<0.5){
+      particles.push({z:0, lane:(Math.random()*2-1)*1.4, life:1});
+    }
+    for(const p of particles){ p.z += difficultySpeed*dt*1.1; p.life -= dt*0.6; }
+    particles = particles.filter(p=>p.z<1.1 && p.life>0);
+  }
+
+  function resolveCollision(o){
+    const playerLane = Math.round(player.targetLane);
+    if(o.type==='coin'){
+      if(o.lanes.includes(playerLane)){
+        score += 25; scoreEl.textContent = score;
+      }
+      return;
+    }
+    if(o.type==='rock'){
+      if(!player.isJumping || player.y > -40){
+        crash();
+      }
+      return;
+    }
+    if(o.type==='bird'){
+      if(!player.isDucking){
+        crash();
+      }
+      return;
+    }
+    if(o.type==='barrier'){
+      if(o.lanes.includes(playerLane)){
+        crash();
+      }
+      return;
+    }
+  }
+
+  function crash(){
+    if(state==='playing') endGame();
+  }
+
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function easeOut(t){ return 1-Math.pow(1-t,3); }
+
+  // ---------- render ----------
+  function render(){
+    ctx.clearRect(0,0,W,H);
+    drawSky();
+    drawGround();
+    drawParticles();
+
+    const drawList = obstacles.slice().sort((a,b)=>a.z-b.z);
+    for(const o of drawList){ drawObstacle(o); }
+
+    drawPlayer();
+  }
+
+  function drawSky(){
+    const g = ctx.createLinearGradient(0,0,0,horizonY());
+    g.addColorStop(0, '#1b1035');
+    g.addColorStop(0.6, '#5b2a6e');
+    g.addColorStop(1, '#ff8f5c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,horizonY());
+
+    // sun glow
+    const sx = vanishX(), sy = horizonY()*0.62;
+    const glow = ctx.createRadialGradient(sx,sy,4, sx,sy,120);
+    glow.addColorStop(0,'rgba(255,209,102,0.9)');
+    glow.addColorStop(1,'rgba(255,209,102,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(sx,sy,120,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#ffe9b8';
+    ctx.beginPath(); ctx.arc(sx,sy,26,0,Math.PI*2); ctx.fill();
+
+    // distant hills silhouette
+    ctx.fillStyle = 'rgba(20,10,40,0.55)';
+    ctx.beginPath();
+    ctx.moveTo(0,horizonY());
+    ctx.quadraticCurveTo(W*0.2, horizonY()-40, W*0.4, horizonY()-10);
+    ctx.quadraticCurveTo(W*0.65, horizonY()-55, W*0.85, horizonY()-15);
+    ctx.lineTo(W,horizonY());
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawGround(){
+    ctx.fillStyle = '#2a2044';
+    ctx.fillRect(0, horizonY(), W, H-horizonY());
+
+    // path trapezoid
+    const leftFar = laneX(-1.5,0), rightFar = laneX(1.5,0);
+    const leftNear = laneX(-1.5,1), rightNear = laneX(1.5,1);
+    ctx.fillStyle = '#3a2e57';
+    ctx.beginPath();
+    ctx.moveTo(leftFar, horizonY());
+    ctx.lineTo(rightFar, horizonY());
+    ctx.lineTo(rightNear, groundY());
+    ctx.lineTo(leftNear, groundY());
+    ctx.closePath();
+    ctx.fill();
+
+    // lane divider lines
+    ctx.strokeStyle = 'rgba(255,209,102,0.55)';
+    ctx.lineWidth = 2;
+    for(const lane of [-0.5,0.5]){
+      ctx.beginPath();
+      ctx.moveTo(laneX(lane,0), horizonY());
+      ctx.lineTo(laneX(lane,1), groundY());
+      ctx.stroke();
+    }
+    // outer edges glow
+    ctx.strokeStyle = 'rgba(255,143,92,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(leftFar,horizonY()); ctx.lineTo(leftNear,groundY()); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(rightFar,horizonY()); ctx.lineTo(rightNear,groundY()); ctx.stroke();
+
+    // scrolling rungs for speed feel
+    const rungOffset = (elapsed*difficultySpeed*3)%1;
+    ctx.strokeStyle = 'rgba(255,244,230,0.18)';
+    ctx.lineWidth = 2;
+    for(let i=0;i<6;i++){
+      let t = (i/6 + rungOffset%(1/6));
+      t = t - Math.floor(t*6)/6;
+      let tt = (i/6 + rungOffset) % 1;
+      const y = worldY(tt);
+      const lx = laneX(-1.5, tt), rx = laneX(1.5, tt);
+      ctx.beginPath(); ctx.moveTo(lx,y); ctx.lineTo(rx,y); ctx.stroke();
+    }
+
+    // ground area below near edge
+    ctx.fillStyle = '#241533';
+    ctx.fillRect(0, groundY(), W, H-groundY());
+  }
+
+  function drawParticles(){
+    for(const p of particles){
+      const t = p.z;
+      const x = laneX(p.lane, t);
+      const y = worldY(t)+4;
+      const s = worldScale(t)*3;
+      ctx.fillStyle = `rgba(255,244,230,${0.4*p.life})`;
+      ctx.beginPath(); ctx.ellipse(x,y,s,s*0.4,0,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  function drawObstacle(o){
+    const t = Math.min(1, o.z);
+    const s = worldScale(t);
+    if(o.type==='coin'){
+      const x = laneX(o.lanes[0], t);
+      const y = worldY(t) - 40*s;
+      drawCoin(x,y,s);
+      return;
+    }
+    if(o.type==='barrier'){
+      for(const lane of o.lanes){
+        const x = laneX(lane, t);
+        const y = worldY(t);
+        drawBarrier(x,y,s);
+      }
+      return;
+    }
+    if(o.type==='rock'){
+      const x = laneX(0,t);
+      const y = worldY(t);
+      drawRock(x,y,s, laneX(-1,t), laneX(1,t));
+      return;
+    }
+    if(o.type==='bird'){
+      const x = laneX(0,t);
+      const y = worldY(t) - 150*s;
+      drawBird(x,y,s, laneX(-1,t), laneX(1,t));
+      return;
+    }
+  }
+
+  function drawCoin(x,y,s){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    const bob = Math.sin(elapsed*6)*4;
+    ctx.translate(0,bob);
+    ctx.fillStyle = '#ffd166';
+    ctx.strokeStyle = '#b8860b';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0,0,20,20,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fff2c9';
+    ctx.beginPath(); ctx.ellipse(-6,-6,7,7,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBarrier(x,y,s){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    const w = 90, h=70;
+    ctx.fillStyle = '#ff5d73';
+    ctx.strokeStyle = '#b8394a';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(-w/2,-h,w,h,10);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    for(let i=-1;i<=1;i++){
+      ctx.fillRect(-w/2+8+i*28, -h+10, 12, h-20);
+    }
+    ctx.restore();
+  }
+
+  function drawRock(x,y,s,xL,xR){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    ctx.fillStyle = '#7a6a9a';
+    ctx.strokeStyle = '#4a3f6b';
+    ctx.lineWidth = 4;
+    const w = (xR-xL)/s*0.55;
+    ctx.beginPath();
+    ctx.moveTo(-w/2,0);
+    ctx.lineTo(-w/2+14,-46);
+    ctx.lineTo(-w/5,-64);
+    ctx.lineTo(w/6,-58);
+    ctx.lineTo(w/2-10,-34);
+    ctx.lineTo(w/2,0);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.15)';
+    ctx.beginPath(); ctx.moveTo(-w/5,-30); ctx.lineTo(0,-56); ctx.lineTo(w/8,-40); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBird(x,y,s,xL,xR){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.scale(s,s);
+    const flap = Math.sin(elapsed*14)*18;
+    ctx.fillStyle = '#3ddc97';
+    ctx.strokeStyle = '#1f8f63';
+    ctx.lineWidth = 3;
+    // body
+    ctx.beginPath(); ctx.ellipse(0,0,26,18,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    // wings
+    ctx.beginPath();
+    ctx.moveTo(-6,-4); ctx.quadraticCurveTo(-40,-10-flap,-50,4-flap); ctx.quadraticCurveTo(-24,6,-6,10); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(6,-4); ctx.quadraticCurveTo(40,-10+flap,50,4+flap); ctx.quadraticCurveTo(24,6,6,10); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // beak & eye
+    ctx.fillStyle='#ffb03b';
+    ctx.beginPath(); ctx.moveTo(22,-2); ctx.lineTo(34,2); ctx.lineTo(22,6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1f1533';
+    ctx.beginPath(); ctx.arc(14,-4,3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPlayer(){
+    const lane = player._displayLane!==undefined?player._displayLane:player.targetLane;
+    const t = 0.97;
+    const x = laneX(lane, t);
+    const groundLevelY = worldY(t);
+    const s = worldScale(t)*1.15;
+
+    const jumpOffset = player.y * 0.55;
+    const duckSquash = player.isDucking ? 0.62 : 1;
+    const bob = player.isJumping || player.isDucking ? 0 : Math.abs(Math.sin(player.runPhase))*10;
+
+    ctx.save();
+    ctx.translate(x, groundLevelY - 4 + jumpOffset - bob*0.3);
+    ctx.scale(s,s);
+
+    // shadow
+    const shadowScale = player.isJumping ? Math.max(0.4, 1-Math.abs(player.y)/260) : 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(0, 6 - jumpOffset*0, 34*shadowScale, 10*shadowScale, 0,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.save();
+    ctx.scale(1, duckSquash);
+    ctx.translate(0,-46*duckSquash*0 );
+
+    const legSwing = Math.sin(player.runPhase)* (player.isJumping?0.1:1);
+
+    // back leg
+    ctx.strokeStyle = '#e8783a';
+    ctx.lineWidth = 12;
+    ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(-8,-14);
+    ctx.lineTo(-8 - legSwing*10, 14 + Math.max(0,legSwing)*6);
+    ctx.stroke();
+    // front leg
+    ctx.beginPath();
+    ctx.moveTo(8,-14);
+    ctx.lineTo(8 + legSwing*10, 14 + Math.max(0,-legSwing)*6);
+    ctx.stroke();
+
+    // tail
+    ctx.fillStyle = '#ff8c42';
+    ctx.strokeStyle = '#c96324';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-18,-30);
+    ctx.quadraticCurveTo(-52,-40 - legSwing*4, -46,-70);
+    ctx.quadraticCurveTo(-30,-56,-16,-42);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#fff4e6';
+    ctx.beginPath();
+    ctx.ellipse(-40,-56,8,10,0.6,0,Math.PI*2); ctx.fill();
+
+    // body
+    ctx.fillStyle = '#ff8c42';
+    ctx.strokeStyle = '#c96324';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0,-40,24,32,0,0,Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    // belly
+    ctx.fillStyle = '#fff4e6';
+    ctx.beginPath();
+    ctx.ellipse(0,-32,13,20,0,0,Math.PI*2);
+    ctx.fill();
+
+    // arms
+    ctx.strokeStyle = '#e8783a';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(-18,-52); ctx.lineTo(-30 - legSwing*4, -30 - legSwing*8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(18,-52); ctx.lineTo(30 + legSwing*4, -30 + legSwing*8);
+    ctx.stroke();
+
+    // head
+    ctx.fillStyle = '#ff8c42';
+    ctx.strokeStyle = '#c96324';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.ellipse(0,-82,22,20,0,0,Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // ears
+    ctx.fillStyle = '#ff8c42';
+    ctx.beginPath();
+    ctx.moveTo(-16,-96); ctx.lineTo(-24,-122); ctx.lineTo(-4,-100); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(16,-96); ctx.lineTo(24,-122); ctx.lineTo(4,-100); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#3a2e57';
+    ctx.beginPath(); ctx.moveTo(-15,-99); ctx.lineTo(-20,-114); ctx.lineTo(-8,-101); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(15,-99); ctx.lineTo(20,-114); ctx.lineTo(8,-101); ctx.closePath(); ctx.fill();
+
+    // face marking
+    ctx.fillStyle = '#fff4e6';
+    ctx.beginPath();
+    ctx.moveTo(0,-88); ctx.quadraticCurveTo(-12,-76,0,-66); ctx.quadraticCurveTo(12,-76,0,-88);
+    ctx.closePath(); ctx.fill();
+
+    // eyes (peeking sideways for personality, looking forward/away since seen from behind mostly show ear+back)
+    ctx.fillStyle = '#1f1533';
+    ctx.beginPath(); ctx.ellipse(-9,-84,2.6,3.4,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(9,-84,2.6,3.4,0,0,Math.PI*2); ctx.fill();
+
+    // nose
+    ctx.fillStyle = '#3a2e57';
+    ctx.beginPath(); ctx.ellipse(0,-68,4,3,0,0,Math.PI*2); ctx.fill();
+
+    ctx.restore(); // duck squash
+    ctx.restore(); // world transform
+  }
+
+  // initial idle render (before start)
+  function idleRender(){
+    render();
+    if(state==='start') requestAnimationFrame(idleRender);
+  }
+  requestAnimationFrame(idleRender);
+
+})();
+</script>
+</body>
+</html>
