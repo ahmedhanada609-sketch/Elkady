@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر القاضي المطور 4D</title>
+    <script src="https://jsdelivr.net"></script>
+    <script src="https://cloudflare.com"></script>
+    <!-- ربط مكتبة الفايربيز الجاهزة -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+</head>
+<body class="bg-slate-950 text-white m-0 p-0 overflow-hidden font-sans">
+
+    <main class="w-full h-screen grid grid-cols-1 md:grid-cols-2">
+        <!-- الجانب الشمال: المنتجات المعروضة ديناميكياً -->
+        <section class="p-8 overflow-y-auto flex flex-col gap-6 border-l border-slate-800">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-black text-blue-500">AL-KADY STORE</h1>
+                <span class="text-sm bg-slate-800 text-blue-400 px-3 py-1 rounded-full border border-slate-700">🎮 تجربة شراء واقعية 4D</span>
+            </div>
+
+            <!-- مكان عرض المنتجات اللي بتيجي من لوحة التحكم -->
+            <div id="products-list" class="flex flex-col gap-4">
+                <div class="text-slate-500 text-center py-8">جاري تحميل أحدث الموبايلات...</div>
+            </div>
+        </section>
+
+        <!-- الجانب اليمين: المجسم والأقسام التفاعلية -->
+        <section class="relative w-full h-full bg-gradient-to-b from-slate-900 to-black flex items-center justify-center">
+            <div id="canvas-container" class="w-full h-full"></div>
+
+            <!-- السلة الطايرة -->
+            <div class="absolute bottom-6 left-6 bg-blue-600 p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-blue-400/30">
+                <span class="text-2xl">🛒</span>
+                <span class="font-bold text-sm">السلة الذكية (<span id="cart-count">0</span>)</span>
+            </div>
+        </section>
+    </main>
+
+    <!-- نافذة تسجيل بيانات الزبون (تظهر عند الشراء) -->
+    <div id="checkout-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+        <div class="bg-slate-950 border border-slate-800 p-6 rounded-2xl max-w-md w-full flex flex-col gap-4">
+            <h2 class="text-xl font-black text-blue-500">📄 إتمام طلب الشراء</h2>
+            <p class="text-xs text-slate-400">برجاء إدخال بياناتك بدقة لتصلك الشحنة فوراً</p>
+            
+            <input type="text" id="cust-name" placeholder="الاسم بالكامل" class="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white outline-none focus:border-blue-500">
+            <input type="tel" id="cust-phone" placeholder="رقم الموبايل (واتساب)" class="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white outline-none focus:border-blue-500">
+            <input type="text" id="cust-location" placeholder="عنوان التوصيل بالتفصيل / الموقع" class="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white outline-none focus:border-blue-500">
+            
+            <select id="cust-payment" class="bg-slate-900 border border-slate-800 p-3 rounded-xl text-white outline-none focus:border-blue-500">
+                <option value="cash">كاش عند الاستلام</option>
+                <option value="card">الدفع بالفيزا للمندوب</option>
+            </select>
+
+            <div class="flex gap-3 mt-2">
+                <button onclick="submitOrder()" class="bg-emerald-600 hover:bg-emerald-500 flex-1 py-3 rounded-xl font-bold transition-all">تأكيد الطلب شحن 🚀</button>
+                <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 px-4 rounded-xl transition-all">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- إعدادات قاعدة البيانات للفايبربيز ---
+        // (هنحط الإعدادات هنا في الخطوة الجاية عشان تربط بلوحتك)
+        const firebaseConfig = { apiKey: "SUA", authDomain: "a.com", projectId: "elkady-store" };
+        // firebase.initializeApp(firebaseConfig);
+        // const db = firebase.firestore();
+
+        // --- محرك الـ 3D الواقعي جداً ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 0, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+        const pLight = new THREE.PointLight(0x3b82f6, 2, 30); pLight.position.set(5, 5, 5); scene.add(pLight);
+
+        // بناء يد آلية واقعية بـ 4 أصابع مفسفرة متحركة
+        const robotHand = new THREE.Group();
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1.2), new THREE.MeshStandardMaterial({color: 0x1e293b, metalness:0.8}));
+        base.position.y = -0.6; robotHand.add(base);
+        
+        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.5), new THREE.MeshStandardMaterial({color: 0x2563eb, metalness:0.9}));
+        palm.position.y = 0.2; robotHand.add(palm);
+
+        // مصفوفة لتخزين الأصابع عشان نعمل حركة القفل والفتح (Grip)
+        const fingers = [];
+        const fGeo = new THREE.BoxGeometry(0.08, 0.35, 0.08);
+        const fMat = new THREE.MeshStandardMaterial({color: 0x34d399, emissive: 0x10b981, emissiveIntensity: 0.6});
+        
+        for(let i=0; i<4; i++) {
+            const f = new THREE.Mesh(fGeo, fMat);
+            f.position.set(-0.25 + (i*0.16), 0.55, 0);
+            robotHand.add(f);
+            fingers.push(f);
+        }
+        scene.add(robotHand);
+
+        let isGrabbing = false, animTime = 0, selectedProduct = null;
+
+        function startGrab(prodName) {
+            if(isGrabbing) return;
+            isGrabbing = true;
+            selectedProduct = prodName;
+
+            // أنيميشن قفل الأصابع على الموبايل
+            fingers.forEach(f => f.rotation.x = 0.5);
+
+            setTimeout(() => {
+                isGrabbing = false;
+                fingers.forEach(f => f.rotation.x = 0);
+                // إظهار نافذة تسجيل البيانات
+                document.getElementById('checkout-modal').style.display = 'flex';
+            }, 1500);
+        }
+
+        function closeModal() { document.getElementById('checkout-modal').style.display = 'none'; }
+
+        function submitOrder() {
+            const name = document.getElementById('cust-name').value;
+            const phone = document.getElementById('cust-phone').value;
+            const loc = document.getElementById('cust-location').value;
+            const pay = document.getElementById('cust-payment').value;
+
+            if(!name || !phone || !loc) return alert('برجاء ملء كل البيانات لضمان الشحن!');
+
+            alert(`شكراً ليك يا فنان! تم تسجيل طلبك لـ (${selectedProduct}). صاحب البرنامج هيتصل بيك فوراً شحن لحسابك.`);
+            closeModal();
+            document.getElementById('cart-count').innerText = parseInt(document.getElementById('cart-count').innerText) + 1;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate); animTime += 0.02;
+            if(isGrabbing) {
+                robotHand.position.z = THREE.MathUtils.lerp(robotHand.position.z, 2.0, 0.1);
+                robotArm.position.x = THREE.MathUtils.lerp(robotHand.position.x, -1.0, 0.1);
+            } else {
+                robotHand.position.set(0, Math.sin(animTime * 2) * 0.08, THREE.MathUtils.lerp(robotHand.position.z, 0, 0.05));
+                robotHand.rotation.y = Math.sin(animTime * 0.5) * 0.2;
+            }
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // منتجات تجريبية لوحة التحكم هتحط مكانها بعدين
+        const demoProducts = [
+            {name: "iPhone 15 Pro Max", price: "1,200$", specs: "256GB • Natural Titanium", img: "📱"},
+            {name: "Samsung Galaxy S24 Ultra", price: "1,150$", specs: "512GB • 12GB RAM", img: "📱"}
+        ];
+        
+        const list = document.getElementById('products-list');
+        list.innerHTML = demoProducts.map(p => `
+            <div class="bg-slate-900/60 p-5 rounded-2xl border border-slate-800 flex justify-between items-center hover:border-blue-500/40 transition-all">
+                <div class="flex items-center gap-4">
+                    <span class="text-3xl bg-slate-800 p-3 rounded-xl">${p.img}</span>
+                    <div>
+                        <h3 class="text-lg font-bold">${p.name}</h3>
+                        <p class="text-xs text-slate-400">${p.specs}</p>
+                        <span class="text-xl font-black text-emerald-400 mt-1 block">${p.price}</span>
+                    </div>
+                </div>
+                <button onclick="startGrab('${p.name}')" class="bg-blue-600 hover:bg-blue-500 px-5 py-3 rounded-xl font-bold text-sm shadow-lg transition-all">شراء 🛒</button>
+            </div>
+        `).join('');
+    </script>
+</body>
+</html>
